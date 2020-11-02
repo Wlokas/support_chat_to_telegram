@@ -20,28 +20,43 @@ class Chat {
         }
 
         $this->ID = $id;
+
+        if($this->checkSession($this->ID)) {
+            do {
+                $data = $this->memcached->get('chsp' . $this->ID, null, Memcached::GET_EXTENDED);
+                $data['value']['last_update'][] = time();
+                $this->memcached->cas($data['cas'], 'chsp' . $this->ID, $data['value']);
+            } while ($this->memcached->getResultCode() != Memcached::RES_SUCCESS);
+
+            $session = $this->getSession();
+            $session->last_update = time();
+            R::store($session);
+        } // Обновление last update
     }
 
     public function getSession() {
-        $session = R::findOne('sessions', 'id = ' . $this->ID);
-        return $session;
+        return R::findOne('sessions', 'id = ' . $this->ID);
     }
 
     public function getHistory($ts = 0) {
         $history = $this->memcached->get('chsp' . $this->ID, null, Memcached::GET_EXTENDED)['value']['history'];
         $updates = [];
 
-        foreach ($history as $key => $value) {
-            $key++;
-            if($key > $ts) {
-                $updates[] = $value;
+        if($history) {
+            foreach ($history as $key => $value) {
+                $key++;
+                if($key > $ts) {
+                    $updates[] = $value;
+                }
             }
-        }
 
-        if(count($updates) > 0) {
-            return ['ts' => count($history), 'updates' => $updates];
+            if(count($updates) > 0) {
+                return ['ts' => count($history), 'updates' => $updates];
+            } else {
+                return false;
+            }
         } else {
-            return false;
+            return ['error' => 'not_found'];
         }
     }
 

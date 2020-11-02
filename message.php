@@ -15,7 +15,7 @@
             $session = new Chat($_COOKIE['chsp_id']);
             $session->addMessage('user', $_POST['text']);
 
-            exit(json_encode($session->getSession()->status));
+            exit(json_encode(['status' => $session->getSession()->status]));
         }
     }
     elseif($_SERVER['REQUEST_METHOD'] == "GET") {

@@ -57,6 +57,9 @@ function checkUpdates(ts) {
         async: true,
         timeout: 61000,
         success: function(data){
+            if(data.error === "not_found") {
+                location.reload();
+            }
             $.each(data.updates, function (index, value) {
                 if(value.type === "user") {
                     $('.container_16f').append('<jdiv class="main_2aa __green_772">\n' +
