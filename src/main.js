@@ -1,4 +1,4 @@
-var ch_status = false;
+let statusThread = false;
 
 $(document).mouseup(function (e) {
     var container = $(".show_6a2");
@@ -47,6 +47,38 @@ $('.sendButton_05b').on('click', function () {
     }
 });
 
+function checkUpdates(ts) {
+    statusThread = true
+    $.ajax({
+        url: 'https://chat.drp-script.ru/message.php',
+        method: 'get',
+        dataType: 'json',
+        data: {'ts':ts},
+        async: true,
+        timeout: 61000,
+        success: function(data){
+            $.each(data.updates, function (index, value) {
+                if(value.type === "user") {
+                    $('.container_16f').append('<jdiv class="main_2aa __green_772">\n' +
+        '                                            <jdiv class="content_e97">\n' +
+        '                                                <jdiv class="main_458 __client_524">\n' +
+        '                                                    <jdiv class="message_f7e _green_c0c __client_524" title="02.11.20 1:10:44">\n' +
+        '                                                        <jdiv class="text_298">'+ value.text +'</jdiv>\n' +
+        '                                                    </jdiv>\n' +
+        '                                                </jdiv>\n' +
+        '                                            </jdiv>\n' +
+        '                                        </jdiv>');
+                }
+            });
+            scrollDown();
+            checkUpdates(data.ts);
+        },
+        error: function (data) {
+            checkUpdates(ts);
+        }
+    });
+}
+
 function sendMessage(text) {
     $.ajax({
         url: 'https://chat.drp-script.ru/message.php',
@@ -54,17 +86,10 @@ function sendMessage(text) {
         dataType: 'json',
         data: {'type':'new_message', 'text':text},
         success: function(data){
-            if(data.status === "ok") {
-                $('.container_16f').append('<jdiv class="main_2aa __green_772">\n' +
-                    '                                            <jdiv class="content_e97">\n' +
-                    '                                                <jdiv class="main_458 __client_524">\n' +
-                    '                                                    <jdiv class="message_f7e _green_c0c __client_524" title="02.11.20 1:10:44">\n' +
-                    '                                                        <jdiv class="text_298">'+ text +'</jdiv>\n' +
-                    '                                                    </jdiv>\n' +
-                    '                                                </jdiv>\n' +
-                    '                                            </jdiv>\n' +
-                    '                                        </jdiv>');
-                scrollDown();
+            if(data.status !== "error") {
+                if(!statusThread) {
+                    checkUpdates(0);
+                }
             }
         }
     });
@@ -190,3 +215,16 @@ function scrollDown() {
     };
 
 }));
+
+if ($.cookie('chsp_id') !== null ) {
+    $.ajax({
+        url: 'https://chat.drp-script.ru/message.php?check',
+        method: 'get',
+        dataType: 'json',
+        success: function(data){
+            if(data.status) {
+                checkUpdates(0);
+            }
+        }
+    });
+}
