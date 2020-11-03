@@ -20,18 +20,6 @@ class Chat {
         }
 
         $this->ID = $id;
-
-        if($this->checkSession($this->ID)) {
-            do {
-                $data = $this->memcached->get('chsp' . $this->ID, null, Memcached::GET_EXTENDED);
-                $data['value']['last_update'][] = time();
-                $this->memcached->cas($data['cas'], 'chsp' . $this->ID, $data['value']);
-            } while ($this->memcached->getResultCode() != Memcached::RES_SUCCESS);
-
-            $session = $this->getSession();
-            $session->last_update = time();
-            R::store($session);
-        } // Обновление last update
     }
 
     public function getSession() {
@@ -65,11 +53,7 @@ class Chat {
             $message = ['type' => 'user', 'text' => $text];
         }
 
-        do {
-            $data = $this->memcached->get('chsp' . $this->ID, null, Memcached::GET_EXTENDED);
-            $data['value']['history'][] = $message;
-            $this->memcached->cas($data['cas'], 'chsp' . $this->ID, $data['value']);
-        } while ($this->memcached->getResultCode() != Memcached::RES_SUCCESS);
+        $this->updateHistory($message);
 
         $message = R::dispense('history');
         $message->id_session = $this->ID;
@@ -82,5 +66,25 @@ class Chat {
     public function checkSession($id) {
         $data = $this->memcached->get('chsp' . $id);
         return $data ? true : false;
+    }
+
+    public function updateTime() {
+        do {
+            $data = $this->memcached->get('chsp' . $this->ID, null, Memcached::GET_EXTENDED);
+            $data['value']['last_update'][] = time();
+            $this->memcached->cas($data['cas'], 'chsp' . $this->ID, $data['value']);
+        } while ($this->memcached->getResultCode() != Memcached::RES_SUCCESS);
+
+        $session = $this->getSession();
+        $session->last_update = time();
+        R::store($session);
+    }
+
+    private function updateHistory($value) {
+        do {
+            $data = $this->memcached->get('chsp' . $this->ID, null, Memcached::GET_EXTENDED);
+            $data['value']['history'][] = $value;
+            $this->memcached->cas($data['cas'], 'chsp' . $this->ID, $data['value']);
+        } while ($this->memcached->getResultCode() != Memcached::RES_SUCCESS);
     }
 }

@@ -23,7 +23,7 @@ while ($data = $memcached->fetch()) {
     $key = $data['key'];
     $cas = $data['cas'];
     $data = $data['value'];
-    if(time() - $data['last_update'] >= 1800) {
+    if(time() - $data['last_update'] >= CFG['timeout']) {
         $memcached->delete($key);
         preg_match('/chsp(\d+)/', $key, $match);
         $session = R::findOne('sessions', 'id = ' . $match[1]);

@@ -29,6 +29,7 @@
             set_time_limit(60);
             $session = new Chat($_COOKIE['chsp_id'], false);
             if($session->checkSession($_COOKIE['chsp_id'])) {
+                $session->updateTime();
                 do {
                     $history = $session->getHistory($_GET['ts']);
                 } while (!$history);
