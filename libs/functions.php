@@ -88,3 +88,77 @@ class Chat {
         } while ($this->memcached->getResultCode() != Memcached::RES_SUCCESS);
     }
 }
+
+class telegram {
+    public $token;
+    public $user_id;
+
+    public function __construct($token, $user_id = NULL)
+    {
+        $this->token = $token;
+        $this->user_id = $user_id;
+    }
+
+    public function getMe() {
+        $need = ['url' => 'https://api.telegram.org/bot'.$this->token.'/getMe'];
+        $response = json_decode($this->curl($need, false));
+        return $response->ok ? $response->result : false;
+    }
+
+    public function send($need){
+        $method = 'sendMessage';
+        $query = [
+            'chat_id' => ($need['from']) ? $need['from'] : $this->user_id,
+            'text' => (is_array($need['text'])) ? implode("\n", $need['text']) : $need['text'],
+            'parse_mode' => 'html',
+            'disable_web_page_preview' => 'true'
+        ];
+
+        if (count($need['reply'])>0) $query['reply_markup'] = json_encode($this->reply($need['reply']));
+
+        if ($need['message_id']) {
+            $method = 'editMessageText';
+            $query['message_id'] = $need['message_id'];
+        }
+
+        if ($need['method'] == 'kickChatMember') {
+            $method = 'kickChatMember';
+            $query = [
+                'chat_id' => $need['chat'],
+                'user_id' => $need['from']
+            ];
+        }
+
+        if ($need['token']) {
+            $token = $need['token'];
+        } else {
+            $token = $this->token;
+        }
+
+        $a = ['url' => 'https://api.telegram.org/bot'.$token.'/'.$method, 'query' => $query];
+        $response = json_decode($this->curl($a, false));
+        return $response->ok ? $response->result->message_id : false;
+    }
+
+    private function reply ($v) {
+        if ($v[0]) return ['inline_keyboard' => $v[1]]; else return ['keyboard' => $v[1], 'resize_keyboard' => true, 'one_time_keyboard' => false];
+    }
+
+    private function curl($need, $proxy = true) {
+        $curl = curl_init($need['url']);
+        curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false);
+        curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
+        curl_setopt($curl, CURLOPT_FOLLOWLOCATION, true);
+        if ($proxy) {
+            curl_setopt($curl, CURLOPT_PROXY, CFG['proxy']['host']);
+            curl_setopt($curl, CURLOPT_PROXYUSERPWD, CFG['proxy']['auth']);
+        }
+        if ($need['query']) {
+            curl_setopt($curl, CURLOPT_POST, true);
+            curl_setopt($curl, CURLOPT_POSTFIELDS, http_build_query($need['query']));
+        }
+        $result = curl_exec($curl);
+        curl_close($curl);
+        return $result;
+    }
+}

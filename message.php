@@ -6,16 +6,45 @@
     require 'libs/RedBean.php';
     require 'libs/functions.php';
 
+    $telegram = new telegram(CFG['token']);
+
     R::setup("mysql:host=".DB['host'].";dbname=".DB['base'], DB['user'], DB['pass']);
     if (!R::testConnection()) exit;
 
 
     if($_SERVER['REQUEST_METHOD'] == "POST") {
         if($_POST['type'] == 'new_message') {
-            $session = new Chat($_COOKIE['chsp_id']);
-            $session->addMessage('user', $_POST['text']);
+            $sessions = new Chat($_COOKIE['chsp_id']);
+            $sessions->addMessage('user', $_POST['text']);
 
-            exit(json_encode(['status' => $session->getSession()->status]));
+            $session = $sessions->getSession();
+
+            if($session->status == "created") {
+                $btn[0][0] = [
+                    'text' => '👥 Взять диалог',
+                    'url' => 'https://t.me/' . $telegram->getMe()->username . '/start=' . $session->id
+                ];
+
+                $message_id = $telegram->send([
+                    'from' => CFG['chat_id'],
+                    'text' => [
+                        '📣 <b>Пользователь написал сообщение в чат!</b>',
+                        '',
+                        $_POST['text'],
+                        '',
+                        '<b>Нажмите на кнопку ниже чтобы взять диалог.</b>'
+                    ],
+                    'reply' => [
+                        true, $btn
+                    ]
+                ]);
+
+                $session->telegram_id_message = $message_id;
+                $session->status = "wait_agent";
+                R::store($session);
+            }
+
+            exit(json_encode(['status' => $session->status]));
         }
     }
     elseif($_SERVER['REQUEST_METHOD'] == "GET") {

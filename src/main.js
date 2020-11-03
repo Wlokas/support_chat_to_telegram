@@ -143,6 +143,8 @@ function sendMessage(text) {
         success: function(data){
             if(data.status !== "error") {
                 if(!statusThread) {
+                    updateAgent('Ищем оператора..', 'Подождите пожалуйста');
+                    addSystemMessage('Ищем для Вас оператора, подождите пожалуйста..');
                     checkUpdates(0);
                 }
             }
