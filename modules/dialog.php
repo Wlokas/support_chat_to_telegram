@@ -138,8 +138,15 @@
         $session->status = 'active';
         R::store($session);
 
-        $user->status = 1;
-        R::store($user);
+        if($user->status == 0) {
+            $user->status = 1;
+            R::store($user);
+            $telegram->send(['from' => CFG['chat_id'],
+                'text' => [
+                    '📗 <b>'. DATA['login'] .' заступил на службу</b>'
+                ]]);
+        }
+
 
         $telegram->send(['from' => CFG['chat_id'], 'message_id' => $session->telegram_id_message, 'text' => '<b>Диалог взял оператор '. DATA['login'] .'</b>']);
 

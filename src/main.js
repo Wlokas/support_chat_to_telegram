@@ -60,6 +60,7 @@ function checkUpdates(ts) {
             if(data.error === "not_found") {
                 updateAgent();
                 addSystemMessage('Оператор вышел из диалога. Напишите сообщение если хотите начать новый');
+                scrollDown();
                 statusThread = false;
             }
             else {
@@ -139,6 +140,7 @@ function sendMessage(text) {
         updateAgent('Ищем оператора..', 'Подождите пожалуйста');
         addSystemMessage('Ищем для Вас оператора, подождите пожалуйста..');
         addUserMessage(text);
+        scrollDown();
     }
     $.ajax({
         url: serverUrl + '/message.php',
