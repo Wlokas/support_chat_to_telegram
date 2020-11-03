@@ -6,6 +6,9 @@
     R::setup("mysql:host=".DB['host'].";dbname=".DB['base'], DB['user'], DB['pass']);
     if (!R::testConnection()) exit;
 
+    $memcached = new Memcached;
+    $memcached->addServer('localhost', 11211);
+
     $response = json_decode(file_get_contents('php://input'), TRUE);
     if (count($response) == 0) exit;
 
@@ -32,15 +35,13 @@
         'member' => $msg['new_chat_member'],
         'left_member' => $msg['left_chat_member']
     ]);
+    $telegram = new telegram(CFG['token'], DATA['from']);
 
     if(DATA['chat'] == CFG['chat_id']) {
         require 'modules/chat.php';
         chat();
-        exit();
     }
-
-    if(DATA['chat'] > 0) {
+    elseif(DATA['chat'] > 0) {
         require 'modules/dialog.php';
         dialog();
-        exit();
     }

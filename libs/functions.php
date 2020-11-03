@@ -26,6 +26,13 @@ class Chat {
         return R::findOne('sessions', 'id = ' . $this->ID);
     }
 
+    public function closeSession() {
+        $this->memcached->delete('chsp' . $this->ID);
+        $session = $this->getSession();
+        $session->status = 'close';
+        R::store($session);
+    }
+
     public function getHistory($ts = 0) {
         $history = $this->memcached->get('chsp' . $this->ID, null, Memcached::GET_EXTENDED)['value']['history'];
         $updates = [];
@@ -49,8 +56,14 @@ class Chat {
     }
 
     public function addMessage($type, $text) {
+        $telegram_id = NULL;
         if($type == 'user') {
             $message = ['type' => 'user', 'text' => $text];
+        } elseif($type == 'agent') {
+            $session = $this->getSession();
+            $user = R::findOne('accounts', 'telegram = ?', [$session->telegram]);
+            $message = ['type' => 'agent', 'text' => $text, 'name' => $user->name, 'description' => $user->description];
+            $telegram_id = $user->telegram;
         }
 
         $this->updateHistory($message);
@@ -58,6 +71,7 @@ class Chat {
         $message = R::dispense('history');
         $message->id_session = $this->ID;
         $message->text = $text;
+        $message->telegram = $telegram_id;
         $message->type = $type;
         $message->time = time();
         R::store($message);
@@ -71,7 +85,7 @@ class Chat {
     public function updateTime() {
         do {
             $data = $this->memcached->get('chsp' . $this->ID, null, Memcached::GET_EXTENDED);
-            $data['value']['last_update'][] = time();
+            $data['value']['last_update'] = time();
             $this->memcached->cas($data['cas'], 'chsp' . $this->ID, $data['value']);
         } while ($this->memcached->getResultCode() != Memcached::RES_SUCCESS);
 
@@ -80,7 +94,7 @@ class Chat {
         R::store($session);
     }
 
-    private function updateHistory($value) {
+    public function updateHistory($value) {
         do {
             $data = $this->memcached->get('chsp' . $this->ID, null, Memcached::GET_EXTENDED);
             $data['value']['history'][] = $value;
@@ -98,6 +112,7 @@ class telegram {
         $this->token = $token;
         $this->user_id = $user_id;
     }
+
 
     public function getMe() {
         $need = ['url' => 'https://api.telegram.org/bot'.$this->token.'/getMe'];

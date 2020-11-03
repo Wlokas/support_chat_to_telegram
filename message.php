@@ -22,13 +22,13 @@
             if($session->status == "created") {
                 $btn[0][0] = [
                     'text' => '👥 Взять диалог',
-                    'url' => 'https://t.me/' . $telegram->getMe()->username . '/start=' . $session->id
+                    'url' => 't.me/' . $telegram->getMe()->username . '?start=' . $session->id
                 ];
 
                 $message_id = $telegram->send([
                     'from' => CFG['chat_id'],
                     'text' => [
-                        '📣 <b>Пользователь написал сообщение в чат!</b>',
+                        '📣 <b>Пользователь написал новое сообщение в чат!</b>',
                         '',
                         $_POST['text'],
                         '',
@@ -42,6 +42,14 @@
                 $session->telegram_id_message = $message_id;
                 $session->status = "wait_agent";
                 R::store($session);
+            } elseif($session->status == "active") {
+                $btn[0][0] = ['text' => '🔒 Закрыть диалог'];
+                $btn[0][1] = ['text' => '🔙 Отдать другому оператору'];
+                $telegram->send([
+                    'from' => $session->telegram,
+                    'text' => $_POST['text'],
+                    'reply' => [false, $btn]
+                ]);
             }
 
             exit(json_encode(['status' => $session->status]));
